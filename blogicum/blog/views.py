@@ -1,15 +1,12 @@
 from django.db.models import Count
-from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, render, redirect
-from django.core.paginator import Paginator
+from django.http import HttpResponseForbidden
 from django.contrib.auth.models import User
-from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 
 
 from .models import Category, Post, Comment
 from .forms import PostForm, CommentForm, UserProfileForm
-from .constants import AMOUNT_POSTS_ON_MAIN_PAGE
 from .managers import get_paginator, get_queryset
 
 
@@ -20,7 +17,6 @@ def index(request):
     return render(request, 'blog/index.html', {'page_obj': page_obj})
 
 
-# Мой код
 def post_detail(request, post_id):
     """Страница отдельной публикации."""
     post = get_object_or_404(
@@ -156,10 +152,7 @@ def profile(request, username):
              .filter(author=user)
              .annotate(comment_count=Count('comments'))
              .order_by('-pub_date'))
-    paginator = Paginator(posts, AMOUNT_POSTS_ON_MAIN_PAGE)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-
+    page_obj = get_paginator(request, posts)
     context = {
         'profile': user,
         'page_obj': page_obj,
