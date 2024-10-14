@@ -42,7 +42,7 @@ urlpatterns = [
          views.profile_edit,
          name='edit_profile'
          ),
-    path('profile/<slug:username>/',
+    path('profile/<str:username>/',
          views.profile,
          name='profile'
          ),

@@ -9,42 +9,18 @@ from django.contrib.auth.decorators import login_required
 
 from .models import Category, Post, Comment
 from .forms import PostForm, CommentForm, UserProfileForm
-from .constants import AMOUNT_POSTS_ON_MAIN_PAGE, FIRST_PAGE
+from .constants import AMOUNT_POSTS_ON_MAIN_PAGE
+from .managers import get_paginator, get_queryset
 
 
 def index(request):
     """Отображение на главной странице."""
-    posts_list = Post.objects.filter(
-        pub_date__lte=timezone.now(),
-        is_published=True,
-        category__is_published=True
-    ).annotate(comment_count=Count('comments')).order_by('-pub_date')
-
-    paginator = Paginator(posts_list, AMOUNT_POSTS_ON_MAIN_PAGE)
-
-    page_number = request.GET.get('page', FIRST_PAGE)
-    page_obj = paginator.get_page(page_number)
-
+    posts_list = get_queryset()
+    page_obj = get_paginator(request, posts_list)
     return render(request, 'blog/index.html', {'page_obj': page_obj})
 
 
-def get_queryset(
-        manager=Post.objects,
-        filters=True,
-        with_comments=True
-):
-    queryset = manager.select_related('author', 'location', 'category')
-    if filters:
-        queryset = queryset.filter(
-            is_published=True,
-            pub_date__lt=timezone.now(),
-            category__is_published=True
-        )
-    if with_comments:
-        queryset = queryset.annotate(comment_count=Count('comments'))
-    return queryset.order_by('-pub_date')
-
-
+# Мой код
 def post_detail(request, post_id):
     """Страница отдельной публикации."""
     post = get_object_or_404(
@@ -54,8 +30,7 @@ def post_detail(request, post_id):
     if post.author != request.user:
         post = get_object_or_404(get_queryset(), id=post_id)
     form = CommentForm()
-    comments = Comment.objects.select_related(
-        'author').filter(post=post)
+    comments = post.comments.select_related('author')
     context = {'post': post,
                'form': form,
                'comments': comments}
@@ -64,31 +39,10 @@ def post_detail(request, post_id):
 
 def category_posts(request, category_slug):
     """Страница категории."""
-    category = get_object_or_404(
-        Category,
-        slug=category_slug,
-        is_published=True,
-    )
-
-    posts = category.posts.select_related(
-        'author',
-        'location',
-        'category'
-    ).filter(
-        is_published=True,
-        pub_date__lt=timezone.now(),
-        category__is_published=True
-    ).annotate(comment_count=Count('comments')).order_by('-pub_date')
-
-    page_number = request.GET.get('page', FIRST_PAGE)
-    paginator = Paginator(posts, AMOUNT_POSTS_ON_MAIN_PAGE)
-    page_obj = paginator.get_page(page_number)
-
-    context = {
-        'category': category,
-        'page_obj': page_obj,
-    }
-
+    category = get_object_or_404(Category, slug=category_slug, is_published=True)
+    posts = get_queryset(manager=category.posts)
+    page_obj = get_paginator(request, posts)
+    context = {'category': category, 'page_obj': page_obj}
     return render(request, 'blog/category.html', context)
 
 
@@ -112,13 +66,10 @@ def edit_post(request, post_id):
     if request.user != post.author:
         return redirect('blog:post_detail', post_id=post.id)
 
-    if request.method == 'POST':
-        form = PostForm(request.POST, instance=post)
-        if form.is_valid():
-            form.save()
-            return redirect('blog:post_detail', post_id=post.id)
-    else:
-        form = PostForm(instance=post)
+    form = PostForm(request.POST or None, files=request.FILES or None, instance=post)
+    if form.is_valid():
+        form.save()
+        return redirect('blog:post_detail', post_id=post.id)
 
     context = {'form': form, 'post': post}
     return render(request, 'blog/create.html', context)

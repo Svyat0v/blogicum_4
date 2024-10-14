@@ -106,10 +106,6 @@ class Comment(BaseModel):
     text = models.TextField(
         verbose_name='Текст комментария'
     )
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name='Дата добавления'
-    )
 
     class Meta:
         default_related_name = 'comments'

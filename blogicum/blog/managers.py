@@ -1,39 +1,29 @@
-from django.db import models
-from django.utils.timezone import now
+from django.core.paginator import Paginator
+from django.utils import timezone
+from django.db.models import Count
+
+from .constants import AMOUNT_POSTS_ON_MAIN_PAGE
+from .models import Post
 
 
-class PostQuerySet(models.QuerySet):
-    """
-    QuerySet (разработанный для публикаций):
-    Метод - join_related_data - служит для объединения данных,
-    Метод - published - фильтровка публикаций.
-    """
+def get_paginator(request, posts_list):
+    page_number = request.GET.get('page', 1)
+    paginator = Paginator(posts_list, AMOUNT_POSTS_ON_MAIN_PAGE)
+    return paginator.get_page(page_number)
 
-    def join_related_data(self):
-        return self.select_related(
-            'author',
-            'category',
-            'location'
-        )
 
-    def published(self):
-        return self.filter(
+def get_queryset(
+        manager=Post.objects,
+        filters=True,
+        with_comments=True
+):
+    queryset = manager.select_related('author', 'location', 'category')
+    if filters:
+        queryset = queryset.filter(
             is_published=True,
-            pub_date__lte=now(),
+            pub_date__lt=timezone.now(),
             category__is_published=True
         )
-
-
-class PostManager(models.Manager):
-    """
-    Класс менеджер (разработанный менеджер для запросов публикаций):
-    Метод - get_queryset - вызов класса PostQuerySet
-    с методами join_related_data + published.
-    """
-
-    def get_queryset(self):
-        return (
-            PostQuerySet(self.model)
-            .join_related_data()
-            .published()
-        )
+    if with_comments:
+        queryset = queryset.annotate(comment_count=Count('comments'))
+    return queryset.order_by('-pub_date')
