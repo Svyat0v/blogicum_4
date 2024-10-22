@@ -7,9 +7,6 @@ from .models import Post
 
 
 def get_paginator(request, posts_list):
-    """
-    Отвечает за организацию постраничного вывода (пагинации) списка постов.
-    """
     page_number = request.GET.get('page', 1)
     paginator = Paginator(posts_list, AMOUNT_POSTS_ON_MAIN_PAGE)
     return paginator.get_page(page_number)
@@ -20,10 +17,6 @@ def get_queryset(
         filters=True,
         with_comments=True
 ):
-    """
-    Отвечает за создание и модификацию запроса (queryset)
-    для получения постов из базы данных с нужными условиями и аннотациями.
-    """
     queryset = manager.select_related('author', 'location', 'category')
     if filters:
         queryset = queryset.filter(
