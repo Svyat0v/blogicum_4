@@ -35,7 +35,11 @@ def post_detail(request, post_id):
 
 def category_posts(request, category_slug):
     """Страница категории."""
-    category = get_object_or_404(Category, slug=category_slug, is_published=True)
+    category = get_object_or_404(
+        Category,
+        slug=category_slug,
+        is_published=True
+    )
     posts = get_queryset(manager=category.posts)
     page_obj = get_paginator(request, posts)
     context = {'category': category, 'page_obj': page_obj}
@@ -62,7 +66,11 @@ def edit_post(request, post_id):
     if request.user != post.author:
         return redirect('blog:post_detail', post_id=post.id)
 
-    form = PostForm(request.POST or None, files=request.FILES or None, instance=post)
+    form = PostForm(
+        request.POST or None,
+        files=request.FILES or None,
+        instance=post
+    )
     if form.is_valid():
         form.save()
         return redirect('blog:post_detail', post_id=post.id)
