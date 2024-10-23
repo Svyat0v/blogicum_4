@@ -12,7 +12,8 @@ from .managers import get_paginator, get_queryset
 def index(request):
     """Отображение на главной странице."""
     posts_list = get_queryset()
-    page_obj = get_paginator(request, posts_list)
+    page_number = request.GET.get('page', 1)
+    page_obj = get_paginator(page_number, posts_list)
     return render(request, 'blog/index.html', {'page_obj': page_obj})
 
 
@@ -40,7 +41,8 @@ def category_posts(request, category_slug):
         is_published=True
     )
     posts = get_queryset(manager=category.posts)
-    page_obj = get_paginator(request, posts)
+    page_number = request.GET.get('page', 1)
+    page_obj = get_paginator(page_number, posts)
     context = {'category': category, 'page_obj': page_obj}
     return render(request, 'blog/category.html', context)
 
@@ -161,7 +163,8 @@ def profile(request, username):
         manager=Post.objects.filter(author=user),
         filters=False
     )
-    page_obj = get_paginator(request, posts)
+    page_number = request.GET.get('page', 1)
+    page_obj = get_paginator(page_number, posts)
     context = {
         'profile': user,
         'page_obj': page_obj,

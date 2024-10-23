@@ -6,8 +6,7 @@ from .constants import AMOUNT_POSTS_ON_MAIN_PAGE
 from .models import Post
 
 
-def get_paginator(request, posts_list):
-    page_number = request.GET.get('page', 1)
+def get_paginator(page_number, posts_list):
     paginator = Paginator(posts_list, AMOUNT_POSTS_ON_MAIN_PAGE)
     return paginator.get_page(page_number)
 
