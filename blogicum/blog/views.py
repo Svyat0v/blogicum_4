@@ -1,4 +1,3 @@
-from django.db.models import Count
 from django.shortcuts import get_object_or_404, render, redirect
 from django.http import HttpResponseForbidden
 from django.contrib.auth.models import User
@@ -81,13 +80,16 @@ def edit_post(request, post_id):
 
 @login_required
 def delete_post(request, post_id):
-    """Удавление поста."""
+    """Удаление публикации."""
     post = get_object_or_404(Post, id=post_id)
-
-    if post.author == request.user:
+    if request.user != post.author:
+        return redirect('blog:post_detail', post_id)
+    form = PostForm(request.POST or None, instance=post)
+    if request.method == 'POST':
         post.delete()
-
-    return redirect('blog:profile', username=request.user.username)
+        return redirect('blog:index')
+    context = {'form': form}
+    return render(request, 'blog/create.html', context)
 
 
 @login_required
@@ -139,16 +141,15 @@ def delete_comment(request, post_id, comment_id):
     return render(request, 'blog/comment.html', {'comment': comment})
 
 
+# Мой код
 @login_required
 def profile_edit(request):
     """Редактирование пользователя."""
-    if request.method == 'POST':
-        form = UserProfileForm(request.POST, instance=request.user)
-        if form.is_valid():
-            form.save()
-            return redirect('blog:profile', username=request.user.username)
-    else:
-        form = UserProfileForm(instance=request.user)
+    form = UserProfileForm(request.POST or None, instance=request.user)
+
+    if form.is_valid():
+        form.save()
+        return redirect('blog:profile', username=request.user.username)
 
     return render(request, 'blog/user.html', {'form': form})
 
@@ -156,10 +157,10 @@ def profile_edit(request):
 def profile(request, username):
     """Профиль пользователя."""
     user = get_object_or_404(User, username=username)
-    posts = (Post.objects
-             .filter(author=user)
-             .annotate(comment_count=Count('comments'))
-             .order_by('-pub_date'))
+    posts = get_queryset(
+        manager=Post.objects.filter(author=user),
+        filters=False
+    )
     page_obj = get_paginator(request, posts)
     context = {
         'profile': user,
