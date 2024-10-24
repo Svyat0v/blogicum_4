@@ -1,3 +1,4 @@
+
 from django.shortcuts import get_object_or_404, render, redirect
 from django.http import HttpResponseForbidden
 from django.contrib.auth.models import User
@@ -159,10 +160,13 @@ def profile_edit(request):
 def profile(request, username):
     """Профиль пользователя."""
     user = get_object_or_404(User, username=username)
-    posts = get_queryset(
-        manager=Post.objects.filter(author=user),
-        filters=False
-    )
+    if request.user == user:
+        posts = user.posts.all().order_by('-pub_date')
+    else:
+        posts = get_queryset(
+            manager=user.posts.all(),
+            filters=True
+        ).order_by('-pub_date')
     page_number = request.GET.get('page', 1)
     page_obj = get_paginator(page_number, posts)
     context = {
